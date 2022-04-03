@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import pytest
 
-from scrapy.downloadermiddlewares.cookies import CookiesMiddleware
+from scrapy.downloadermiddlewares.cookies import CookiesMiddleware, AccessCookiesMiddleware
 from scrapy.downloadermiddlewares.defaultheaders import DefaultHeadersMiddleware
 from scrapy.downloadermiddlewares.redirect import RedirectMiddleware
 from scrapy.exceptions import NotConfigured
@@ -62,6 +62,7 @@ class CookiesMiddlewareTest(TestCase):
     def assertCookieValEqual(self, first, second, msg=None):
         def split_cookies(cookies):
             return sorted([s.strip() for s in to_bytes(cookies).split(b";")])
+
         return self.assertEqual(split_cookies(first), split_cookies(second), msg=msg)
 
     def setUp(self):
@@ -111,9 +112,9 @@ class CookiesMiddlewareTest(TestCase):
         crawler = get_crawler(settings_dict={'COOKIES_DEBUG': True})
         mw = CookiesMiddleware.from_crawler(crawler)
         with LogCapture(
-            'scrapy.downloadermiddlewares.cookies',
-            propagate=False,
-            level=logging.DEBUG,
+                'scrapy.downloadermiddlewares.cookies',
+                propagate=False,
+                level=logging.DEBUG,
         ) as log:
             req = Request('http://scrapytest.org/')
             res = Response('http://scrapytest.org/', headers={'Set-Cookie': 'C1=value1; path=/'})
@@ -136,9 +137,9 @@ class CookiesMiddlewareTest(TestCase):
         crawler = get_crawler(settings_dict={'COOKIES_DEBUG': False})
         mw = CookiesMiddleware.from_crawler(crawler)
         with LogCapture(
-            'scrapy.downloadermiddlewares.cookies',
-            propagate=False,
-            level=logging.DEBUG,
+                'scrapy.downloadermiddlewares.cookies',
+                propagate=False,
+                level=logging.DEBUG,
         ) as log:
             req = Request('http://scrapytest.org/')
             res = Response('http://scrapytest.org/', headers={'Set-Cookie': 'C1=value1; path=/'})
@@ -363,9 +364,9 @@ class CookiesMiddlewareTest(TestCase):
         Invalid cookies are logged as warnings and discarded
         """
         with LogCapture(
-            'scrapy.downloadermiddlewares.cookies',
-            propagate=False,
-            level=logging.INFO,
+                'scrapy.downloadermiddlewares.cookies',
+                propagate=False,
+                level=logging.INFO,
         ) as lc:
             cookies1 = [{'value': 'bar'}, {'name': 'key', 'value': 'value1'}]
             req1 = Request('http://example.org/1', cookies=cookies1)
@@ -416,12 +417,12 @@ class CookiesMiddlewareTest(TestCase):
         self.assertCookieValEqual(req4.headers['Cookie'], b'a=b')
 
     def _test_cookie_redirect(
-        self,
-        source,
-        target,
-        *,
-        cookies1,
-        cookies2,
+            self,
+            source,
+            target,
+            *,
+            cookies1,
+            cookies2,
     ):
         input_cookies = {'a': 'b'}
 
@@ -491,11 +492,11 @@ class CookiesMiddlewareTest(TestCase):
         )
 
     def _test_cookie_header_redirect(
-        self,
-        source,
-        target,
-        *,
-        cookies2,
+            self,
+            source,
+            target,
+            *,
+            cookies2,
     ):
         """Test the handling of a user-defined Cookie header when building a
         redirect follow-up request.
@@ -567,13 +568,13 @@ class CookiesMiddlewareTest(TestCase):
         )
 
     def _test_user_set_cookie_domain_followup(
-        self,
-        url1,
-        url2,
-        domain,
-        *,
-        cookies1,
-        cookies2,
+            self,
+            url1,
+            url2,
+            domain,
+            *,
+            cookies1,
+            cookies2,
     ):
         input_cookies = [
             {
@@ -630,12 +631,12 @@ class CookiesMiddlewareTest(TestCase):
         )
 
     def _test_server_set_cookie_domain_followup(
-        self,
-        url1,
-        url2,
-        domain,
-        *,
-        cookies,
+            self,
+            url1,
+            url2,
+            domain,
+            *,
+            cookies,
     ):
         request1 = Request(url1)
         self.mw.process_request(request1, self.spider)
@@ -693,3 +694,39 @@ class CookiesMiddlewareTest(TestCase):
             'co.uk',
             cookies=True,
         )
+
+
+class AccessCookiesMiddlewareTest(TestCase):
+
+    def assertCookieValEqual(self, first, second, msg=None):
+        def split_cookies(cookies):
+            return sorted([s.strip() for s in to_bytes(cookies).split(b";")])
+
+        return self.assertEqual(split_cookies(first), split_cookies(second), msg=msg)
+
+    def setUp(self):
+        self.spider = Spider('foo')
+        self.mw = AccessCookiesMiddleware()
+
+        self.redirect_middleware = RedirectMiddleware(settings=Settings())
+
+    def tearDown(self):
+        del self.mw
+        del self.redirect_middleware
+
+    def test_basic(self):
+        req = Request('http://scrapytest.org/')
+        headers = {'Set-Cookie': 'C1=value1; path=/'}
+        res = Response('http://scrapytest.org/', headers=headers)
+
+        assert self.mw.process_request(req, self.spider) is None
+        assert 'Cookie' not in req.headers
+
+        assert self.mw.process_response(req, res, self.spider) is res
+
+        req2 = Request('http://scrapytest.org/sub1/')
+
+        self.spider.get
+
+        assert self.mw.process_request(req2, self.spider) is None
+        self.assertEqual(req2.headers.get('Cookie'), b"C1=value1")

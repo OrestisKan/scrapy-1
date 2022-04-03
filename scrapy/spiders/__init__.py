@@ -1,13 +1,13 @@
 """
 Base class for Scrapy spiders
-
 See documentation in docs/topics/spiders.rst
 """
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from scrapy import signals
 from scrapy.http import Request
+from scrapy.http.cookies import CookieJar
 from scrapy.utils.trackref import object_ref
 from scrapy.utils.url import url_is_from_spider
 
@@ -19,6 +19,7 @@ class Spider(object_ref):
 
     name: Optional[str] = None
     custom_settings: Optional[dict] = None
+    _cookie_jar: Optional[CookieJar] = None
 
     def __init__(self, name=None, **kwargs):
         if name is not None:
@@ -36,7 +37,6 @@ class Spider(object_ref):
 
     def log(self, message, level=logging.DEBUG, **kw):
         """Log the given message at the given log level
-
         This helper wraps a log call to the logger within the spider, but you
         can use it directly (e.g. Spider.logger.info('msg')) or use any other
         Python logger too.
@@ -87,6 +87,38 @@ class Spider(object_ref):
         return f"<{type(self).__name__} {self.name!r} at 0x{id(self):0x}>"
 
     __repr__ = __str__
+
+    def set_cookie_jar(self, cj: CookieJar):
+        self._cookie_jar = cj
+
+    def save_cookies(self):  # todo should return sesssion Id
+        # TODO
+        pass
+
+    def initialize_cookiejar(self, session_id):
+        # TODO
+        pass
+
+    def add_cookie(self, cookie):
+        self._cookie_jar.set_cookie(cookie)
+
+    # TODO Maybe simplify
+    def get_cookies(self, name: str = None, names: List[str] = None, return_type=list):
+        if name is not None:
+            return self._cookie_jar.get_cookie(name)
+        if isinstance(return_type, list):
+            cookies_list = self._cookie_jar.list_from_cookiejar()
+            if names is not None:
+                return list(filter(lambda cookie: cookie.name in names, cookies_list))
+            return cookies_list
+        else:
+            cookies_dict = self._cookie_jar.dict_from_cookiejar()
+            if names is not None:
+                return {name: cookies_dict[name] for name in names}
+            return cookies_dict
+
+    def clear_cookies(self):
+        self._cookie_jar = CookieJar()
 
 
 # Top-level imports
