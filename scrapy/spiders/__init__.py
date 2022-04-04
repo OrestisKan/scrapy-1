@@ -1,6 +1,5 @@
 """
 Base class for Scrapy spiders
-
 See documentation in docs/topics/spiders.rst
 """
 import logging
@@ -38,7 +37,6 @@ class Spider(object_ref):
 
     def log(self, message, level=logging.DEBUG, **kw):
         """Log the given message at the given log level
-
         This helper wraps a log call to the logger within the spider, but you
         can use it directly (e.g. Spider.logger.info('msg')) or use any other
         Python logger too.
@@ -114,7 +112,11 @@ class Spider(object_ref):
                 return list(filter(lambda cookie: cookie.name in names, cookies_list))
             return cookies_list
         else:
+<<<<<<< HEAD
             cookies_dict = self._cookie_jar.dict_from_cookiejar()
+=======
+            cookies_dict = iter(self._cookie_jar)
+>>>>>>> master
             if names is not None:
                 return {name: cookies_dict[name] for name in names}
             return cookies_dict
